@@ -1,0 +1,9 @@
+/* Element Plus Theme Override */
+/* Override primary color to rgb(0, 47, 167) */
+@forward 'element-plus/theme-chalk/src/common/var.scss' with (
+  $colors: (
+    'primary': (
+      'base': rgb(0, 47, 167),
+    ),
+  )
+);
