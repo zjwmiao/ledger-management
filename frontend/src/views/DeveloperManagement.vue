@@ -86,7 +86,13 @@
           @filter-change="handleFilterChange"
           @search-change="handleSearchChange"
           @sort-change="handleSortChange"
-        />
+        >
+          <template #name="{ row }">
+            <el-link type="primary" @click="navigateToDeveloperDetail(row.name)">
+              {{ row.name }}
+            </el-link>
+          </template>
+        </CommonTable>
         <div class="table-pagination">
           <span class="page-info">共 {{ developerTableData.length }} 条项目</span>
           <el-pagination
@@ -115,7 +121,13 @@
           @filter-change="handleFilterChange"
           @search-change="handleSearchChange"
           @sort-change="handleSortChange"
-        />
+        >
+          <template #name="{ row }">
+            <el-link type="primary" @click="navigateToDeveloperDetail(row.name)">
+              {{ row.name }}
+            </el-link>
+          </template>
+        </CommonTable>
         <div class="table-pagination">
           <span class="page-info">共 {{ metricsTableData.length }} 条项目</span>
           <el-pagination
@@ -132,10 +144,13 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { ArrowDown } from '@element-plus/icons-vue'
 import BaseChart from '@/components/BaseChart.vue'
 import CommonTable from '@/components/CommonTable.vue'
 import type { EChartsOption } from 'echarts'
+
+const router = useRouter()
 
 // Community selection
 const selectedCommunity = ref('全部社区')
@@ -144,6 +159,14 @@ const handleCommunityChange = (command: string) => {
   selectedCommunity.value = command
   console.log('Selected community:', command)
   // TODO: Update charts based on selected community
+}
+
+// Navigate to developer detail page
+const navigateToDeveloperDetail = (name: string) => {
+  router.push({
+    path: '/developer-detail',
+    query: { name }
+  })
 }
 
 // Form data
@@ -491,6 +514,10 @@ const multiSeriesChartOption = computed<EChartsOption>(() => ({
 .page-info {
   font-size: 14px;
   color: #666;
+}
+
+:deep(.el-table .el-link) {
+  font-weight: 500;
 }
 
 @media (max-width: 768px) {

@@ -23,6 +23,11 @@ const router = createRouter({
       component: () => import('@/views/DeveloperManagement.vue')
     },
     {
+      path: '/developer-detail',
+      name: 'DeveloperDetail',
+      component: () => import('@/views/DeveloperDetail.vue')
+    },
+    {
       path: '/content-management',
       name: 'ContentManagement',
       component: () => import('@/views/ContentManagement.vue')
