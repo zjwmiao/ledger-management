@@ -148,19 +148,35 @@
               </el-col>
               <el-col :span="12">
                 <el-form-item label="活动支撑">
-                  <el-input v-model="editForm.support" placeholder="请输入活动支撑" />
+                  <el-select v-model="editForm.support" placeholder="请选择活动支撑">
+                    <el-option label="华为技术支持" value="华为技术支持" />
+                    <el-option label="MindSpore社区" value="MindSpore社区" />
+                    <el-option label="openGauss社区" value="openGauss社区" />
+                    <el-option label="openEuler社区" value="openEuler社区" />
+                    <el-option label="MindSpore技术团队" value="MindSpore技术团队" />
+                  </el-select>
                 </el-form-item>
               </el-col>
             </el-row>
             <el-row :gutter="40">
               <el-col :span="12">
                 <el-form-item label="活动类型" prop="type">
-                  <el-input v-model="editForm.type" placeholder="请输入活动类型" />
+                  <el-select v-model="editForm.type" placeholder="请选择活动类型">
+                    <el-option label="技术峰会" value="技术峰会" />
+                    <el-option label="开发者大会" value="开发者大会" />
+                    <el-option label="技术交流会" value="技术交流会" />
+                    <el-option label="研讨会" value="研讨会" />
+                    <el-option label="工作坊" value="工作坊" />
+                  </el-select>
                 </el-form-item>
               </el-col>
               <el-col :span="12">
                 <el-form-item label="活动方式" prop="format">
-                  <el-input v-model="editForm.format" placeholder="请输入活动方式" />
+                  <el-select v-model="editForm.format" placeholder="请选择活动方式">
+                    <el-option label="线下" value="线下" />
+                    <el-option label="线上" value="线上" />
+                    <el-option label="线下+线上" value="线下+线上" />
+                  </el-select>
                 </el-form-item>
               </el-col>
             </el-row>
@@ -744,8 +760,8 @@ const saveParticipantEdit = async () => {
 }
 
 .info-content {
-  background-color: rgba(234, 234, 235, 0.4);
-  padding: 20px;
+  background-color: rgba(243, 243, 245, 0.4);
+  padding: 24px;
   border-radius: 4px;
 }
 
@@ -802,6 +818,11 @@ const saveParticipantEdit = async () => {
   justify-content: flex-end;
   gap: 12px;
   padding-top: 12px;
+}
+
+.form-actions :deep(.el-button) {
+  border-radius: 100px;
+  padding: 8px 20px;
 }
 
 .info-form :deep(.el-select),

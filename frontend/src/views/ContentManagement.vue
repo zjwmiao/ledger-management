@@ -74,7 +74,7 @@
 
     <el-card style="margin-top: 16px;">
       <div class="table-header">
-        <h3 class="table-title">开发者列表</h3>
+        <h3 class="table-title">开发者贡献</h3>
         <div class="table-header-right">
           <el-input
             v-model="tableSearchText"
@@ -444,9 +444,36 @@ const tableColumnsRaw = [
   { label: '发布平台', prop: 'platform', sortable: true },
   { label: '作者', prop: 'author' },
   { label: '发布时间', prop: 'publishTime', sortable: true },
-  { label: '内容类型', prop: 'contentType' },
-  { label: '素材类型', prop: 'materialType' },
-  { label: '发布类型', prop: 'publishType' },
+  {
+    label: '内容类型',
+    prop: 'contentType',
+    filterable: true,
+    filterOptions: [
+      { label: '版本宣发', value: '版本宣发' },
+      { label: '活动宣发', value: '活动宣发' },
+      { label: '技术解读', value: '技术解读' },
+      { label: '学习教程', value: '学习教程' }
+    ]
+  },
+  {
+    label: '素材类型',
+    prop: 'materialType',
+    filterable: true,
+    filterOptions: [
+      { label: '视频', value: '视频' },
+      { label: '海报', value: '海报' },
+      { label: '图文', value: '图文' }
+    ]
+  },
+  {
+    label: '发布类型',
+    prop: 'publishType',
+    filterable: true,
+    filterOptions: [
+      { label: '平台首发', value: '平台首发' },
+      { label: '转发', value: '转发' }
+    ]
+  },
   { label: '发布人', prop: 'publisher' },
   { label: '阅读数', prop: 'readCount' },
   { label: '收藏数', prop: 'favoriteCount' },
