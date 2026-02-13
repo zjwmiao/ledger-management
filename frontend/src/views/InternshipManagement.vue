@@ -12,16 +12,16 @@
       @sort-change="handleSortChange"
     >
       <!-- 项目名称列，如果有原始链接则显示为链接 -->
-      <template #projectName="{ row }">
+      <template #issueTitle="{ row }">
         <a
           v-if="row.originalUrl"
           :href="row.originalUrl"
           target="_blank"
           class="project-link"
         >
-          {{ row.projectName }}
+          {{ row.issueTitle }}
         </a>
-        <span v-else>{{ row.projectName }}</span>
+        <span v-else>{{ row.issueTitle }}</span>
       </template>
     </CommonTable>
 
@@ -62,75 +62,59 @@ const formatDate = (dateString: string | null) => {
 // 表格列配置
 const tableColumns = [
   {
-    prop: 'projectName',
-    label: '项目名称',
+    prop: 'issueTitle',
+    label: '题目',
     minWidth: 200,
-    searchable: true
   },
   {
-    prop: 'claimant',
-    label: '认领人',
+    prop: 'createdAt',
+    label: '出题时间',
     width: 120,
-    searchable: true
   },
   {
-    prop: 'mentor',
+    prop: 'tutorLogin',
     label: '导师',
-    width: 120
+    width: 120,
   },
   {
-    prop: 'mentorEmail',
+    prop: 'tutorEmail',
     label: '导师邮箱',
     width: 180
   },
   {
-    prop: 'belongingSig',
-    label: '所属SIG',
-    width: 150,
-    filterable: true,
-    filterOptions: [
-      { label: 'Kernel', value: 'Kernel' },
-      { label: 'Networking', value: 'Networking' },
-      { label: 'Storage', value: 'Storage' },
-      { label: 'Virtualization', value: 'Virtualization' },
-      { label: 'Cloud Native', value: 'Cloud Native' }
-    ]
-  },
-  {
-    prop: 'status',
-    label: '状态',
-    width: 100,
-    filterable: true,
-    filterOptions: [
-      { label: '进行中', value: '进行中' },
-      { label: '已完成', value: '已完成' },
-      { label: '已关闭', value: '已关闭' },
-      { label: '待认领', value: '待认领' }
-    ]
+    prop: 'expectedCompletionTime',
+    label: '期望完成时间',
+    width: 120,
   },
   {
     prop: 'score',
-    label: '评分',
-    width: 100,
-    sortable: true
-  },
-  {
-    prop: 'createdAt',
-    label: '创建时间',
+    label: '分值',
     width: 120,
-    sortable: true
   },
   {
-    prop: 'expectedCompletionTime',
-    label: '预期完成时间',
-    width: 140,
-    sortable: true
-  },
-  {
-    prop: 'closedAt',
-    label: '关闭时间',
+    prop: 'currentAssignUser',
+    label: '认领人',
     width: 120,
-    sortable: true
+  },
+  {
+    prop: 'assignTime',
+    label: '认领时间',
+    width: 120,
+  },
+  {
+    prop: 'issueState',
+    label: '状态',
+    width: 120,
+  },
+  {
+    prop: 'sigNames',
+    label: '所属SIG',
+    width: 150,
+  },
+  {
+    prop: 'issueUrl',
+    label: '详情链接',
+    width: 150,
   }
 ]
 
@@ -144,9 +128,6 @@ const formattedTableData = computed(() => {
     ...item,
     createdAt: formatDate(item.createdAt),
     expectedCompletionTime: formatDate(item.expectedCompletionTime),
-    closedAt: formatDate(item.closedAt),
-    systemCreatedAt: formatDate(item.systemCreatedAt),
-    systemUpdatedAt: formatDate(item.systemUpdatedAt)
   }))
 })
 
