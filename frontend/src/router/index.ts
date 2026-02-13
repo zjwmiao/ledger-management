@@ -31,6 +31,11 @@ const router = createRouter({
       path: '/content-management',
       name: 'ContentManagement',
       component: () => import('@/views/ContentManagement.vue')
+    },
+    {
+      path: '/internship-management',
+      name: 'InternshipManagement',
+      component: () => import('@/views/InternshipManagement.vue')
     }
   ],
 })

@@ -14,6 +14,9 @@
       <el-menu-item index="/content-management">
         <span>内容传播管理</span>
       </el-menu-item>
+      <el-menu-item index="/internship-management">
+        <span>活动详情</span>
+      </el-menu-item>
     </el-menu>
   </aside>
 </template>

@@ -33,4 +33,9 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  server: {
+    proxy: {
+      '/api': 'http://159.138.59.176:9999/'
+    }
+  }
 })
