@@ -9,11 +9,10 @@
     <div class="upload-content">
       <!-- 上传区域 -->
       <el-upload
-        ref="uploadRef"
+        v-model:file-list="fileList"
         class="upload-area"
         drag
         :auto-upload="false"
-        :on-change="handleFileChange"
         :on-remove="handleRemove"
         :limit="1"
         :accept="acceptTypes"
@@ -43,11 +42,23 @@
             <span class="file-name">{{ file.name }}</span>
           </div>
           <div class="file-actions">
+            <el-icon 
+              v-if="file.status === 'uploading'" 
+              class="action-icon is-loading" 
+            >
+              <Loading />
+            </el-icon>
             <el-icon
               v-if="file.status === 'success'"
               class="action-icon success-icon"
             >
               <CircleCheck />
+            </el-icon>
+            <el-icon
+              v-if="file.status === 'fail'"
+              class="action-icon"
+            >
+              <CircleClose />
             </el-icon>
             <el-icon
               class="action-icon delete-icon"
@@ -80,14 +91,16 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Upload, Document, CircleCheck, Delete } from '@element-plus/icons-vue'
+import { Upload, Document, CircleCheck, Delete, Loading, CircleClose } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import type { UploadFile, UploadInstance, UploadUserFile } from 'element-plus'
+import type { UploadUserFile } from 'element-plus'
+import { request } from '@/utils/request';
 
 interface Props {
   modelValue: boolean
   acceptTypes?: string
   maxSize?: number // MB
+  uploadUrl?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -97,11 +110,9 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
-  'success': [file: File]
-  'error': [error: string]
+  'success': []
 }>()
 
-const uploadRef = ref<UploadInstance>()
 const fileList = ref<UploadUserFile[]>([])
 const uploading = ref(false)
 const uploadError = ref('')
@@ -110,34 +121,6 @@ const dialogVisible = computed({
   get: () => props.modelValue,
   set: (value) => emit('update:modelValue', value)
 })
-
-// 处理文件选择
-const handleFileChange = (uploadFile: UploadFile) => {
-  uploadError.value = ''
-
-  // 验证文件大小
-  if (uploadFile.size && uploadFile.size > props.maxSize * 1024 * 1024) {
-    uploadError.value = `文件大小不能超过 ${props.maxSize}M`
-    uploadFile.status = 'fail'
-    fileList.value = [uploadFile as UploadUserFile]
-    return
-  }
-
-  // 验证文件类型
-  const fileName = uploadFile.name.toLowerCase()
-  const acceptedExtensions = props.acceptTypes.split(',').map(ext => ext.trim())
-  const isValidType = acceptedExtensions.some(ext => fileName.endsWith(ext))
-
-  if (!isValidType) {
-    uploadError.value = '上传失败，请检查文件是否符合要求'
-    uploadFile.status = 'fail'
-    fileList.value = [uploadFile as UploadUserFile]
-    return
-  }
-
-  uploadFile.status = 'ready'
-  fileList.value = [uploadFile as UploadUserFile]
-}
 
 // 移除文件
 const handleRemove = (file: UploadUserFile) => {
@@ -152,43 +135,60 @@ const handleConfirm = async () => {
     return
   }
 
-  const file = fileList.value[0]
-  if (!file) {
-    return
-  }
+  for (const file of fileList.value) {
+    // 验证文件大小
+    if (file.size && file.size > props.maxSize * 1024 * 1024) {
+      uploadError.value = `文件大小不能超过 ${props.maxSize}M`
+      file.status = 'fail'
+      fileList.value = [file as UploadUserFile]
+      return
+    }
 
-  if (file.status === 'fail') {
-    ElMessage.error(uploadError.value || '文件验证失败')
-    return
+    // 验证文件类型
+    const fileName = file.name.toLowerCase()
+    const acceptedExtensions = props.acceptTypes.split(',').map(ext => ext.trim())
+    const isValidType = acceptedExtensions.some(ext => fileName.endsWith(ext))
+
+    if (!isValidType) {
+      uploadError.value = '上传失败，请检查文件是否符合要求'
+      file.status = 'fail'
+      fileList.value = [file as UploadUserFile]
+      return
+    }
   }
 
   uploading.value = true
-
-  try {
-    // 模拟上传过程
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    // 标记为成功
-    file.status = 'success'
-
-    ElMessage.success('上传成功')
-
-    // 确保 raw 存在
+  let hasFailed = false
+  await Promise.all(fileList.value.map(async file => {
     if (file.raw) {
-      emit('success', file.raw)
+      file.status = 'uploading'
+      const formData = new FormData()
+      formData.append('file', file.raw as File, file.name)
+      try {
+        await request.post(props.uploadUrl!, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        })
+        // 标记为成功
+        file.status = 'success'
+      } catch (error) {
+        file.status = 'fail'
+        hasFailed = true
+      }
     }
+  }))
+  uploading.value = false
 
-    // 延迟关闭对话框，让用户看到成功状态
+  // 延迟关闭对话框，让用户看到成功状态
+  if (!hasFailed) {
+    ElMessage.success('上传成功')
+    emit('success')
     setTimeout(() => {
       handleClose()
     }, 500)
-  } catch (error) {
-    file.status = 'fail'
-    uploadError.value = '上传失败，请重试'
-    emit('error', uploadError.value)
-    ElMessage.error(uploadError.value)
-  } finally {
-    uploading.value = false
+  } else {
+    ElMessage.error('上传失败')
   }
 }
 

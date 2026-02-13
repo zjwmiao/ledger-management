@@ -10,7 +10,7 @@
     <el-card class="table-card" shadow="never">
       <CommonTable
         :columns="tableColumns"
-        :data="tableData"
+        :data="paginatedData"
         @filter-change="handleFilterChange"
         @search-change="handleSearchChange"
         @sort-change="handleSortChange"
@@ -18,30 +18,42 @@
         <!-- Activity Name Column with RouterLink -->
         <template #activityName="{ row }">
           <router-link
-            :to="{ path: '/activity-detail', query: { name: row.activityName } }"
+            :to="{ path: '/activity-detail', query: { id: row.id } }"
             class="activity-link"
           >
             {{ row.activityName }}
           </router-link>
         </template>
       </CommonTable>
+
+      <!-- 分页器 -->
+      <div class="pagination-container">
+        <span class="page-info">共 {{ totalItems }} 条活动</span>
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :page-sizes="[10, 20, 50, 100]"
+          :total="totalItems"
+          layout="sizes, prev, pager, next, jumper"
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+        />
+      </div>
     </el-card>
 
     <!-- 上传对话框 -->
-    <UploadDialog
-      v-model="uploadDialogVisible"
-      @success="handleUploadSuccess"
-      @error="handleUploadError"
-    />
+    <UploadDialog v-model="uploadDialogVisible" upload-url="/activities/import" @success="fetchActivities" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import CommonTable from '@/components/CommonTable.vue'
 import UploadDialog from '@/components/UploadDialog.vue'
 import { ElMessage } from 'element-plus'
+import { getActivities, type Activity } from '@/api/activity'
 
+// 表格列配置
 const tableColumns = [
   {
     prop: 'community',
@@ -80,63 +92,84 @@ const tableColumns = [
   }
 ]
 
-const tableData = ref([
-  {
-    community: 'openEuler',
-    activityName: 'openEuler Summit 2024',
-    time: '2024-03-15',
-    location: '北京',
-    participants: 500
-  },
-  {
-    community: 'MindSpore',
-    activityName: 'AI开发者大会',
-    time: '2024-04-20',
-    location: '上海',
-    participants: 300
-  },
-  {
-    community: 'openGauss',
-    activityName: '数据库技术交流会',
-    time: '2024-05-10',
-    location: '深圳',
-    participants: 200
-  },
-  {
-    community: 'openEuler',
-    activityName: '开源操作系统研讨会',
-    time: '2024-06-05',
-    location: '杭州',
-    participants: 150
-  },
-  {
-    community: 'MindSpore',
-    activityName: '机器学习实战工作坊',
-    time: '2024-07-12',
-    location: '广州',
-    participants: 250
-  }
-])
+// 原始数据和表格数据
+const allActivities = ref<Activity[]>([])
+const tableData = ref<any[]>([])
+const loading = ref(false)
+
+// 分页相关
+const currentPage = ref(1)
+const pageSize = ref(10)
+const totalItems = computed(() => tableData.value.length)
+
+// 计算分页后的数据
+const paginatedData = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return tableData.value.slice(start, end)
+})
 
 // 上传对话框
 const uploadDialogVisible = ref(false)
 
+// 转换API数据为表格数据格式
+const transformActivityData = (activities: Activity[]) => {
+  return activities.map(activity => ({
+    id: activity.id,
+    community: activity.community,
+    activityName: activity.name,
+    time: formatDateRange(activity.startDate, activity.endDate),
+    location: activity.location,
+    participants: activity.maxParticipants,
+    type: activity.type,
+    status: activity.status,
+    organizer: activity.organizer,
+    description: activity.description
+  }))
+}
+
+// 格式化日期范围
+const formatDateRange = (startDate: string, endDate: string) => {
+  if (!startDate) return ''
+  if (startDate === endDate) {
+    return startDate
+  }
+  return `${startDate} - ${endDate}`
+}
+
+// 获取活动列表
+const fetchActivities = async () => {
+  loading.value = true
+  try {
+    const data = await getActivities()
+    allActivities.value = data
+    tableData.value = transformActivityData(data)
+    ElMessage.success('活动列表加载成功')
+  } catch (error) {
+    console.error('Failed to fetch activities:', error)
+    ElMessage.error('活动列表加载失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 页面加载时获取数据
+onMounted(() => {
+  fetchActivities()
+})
+
 const handleDownloadTemplate = () => {
-  // TODO: 实现下载模板功能
-  ElMessage.info('下载模板功能开发中...')
+  const link = document.createElement('a')
+  link.href = '/20260206_activity_data_import.xlsx'
+  link.download = '20260206_activity_data_import.xlsx'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  ElMessage.success('模板下载成功')
 }
 
 const handleImport = () => {
   uploadDialogVisible.value = true
-}
-
-const handleUploadSuccess = (file: File) => {
-  ElMessage.success(`文件 ${file.name} 上传成功`)
-  // TODO: 处理上传成功后的逻辑，例如刷新表格数据
-}
-
-const handleUploadError = (error: string) => {
-  ElMessage.error(error)
 }
 
 const handleFilterChange = (prop: string, values: string[]) => {
@@ -153,6 +186,17 @@ const handleSortChange = (prop: string, order: string | null) => {
   console.log('Sort change:', prop, order)
   // TODO: 实现排序逻辑
 }
+
+// 分页事件处理
+const handleSizeChange = (val: number) => {
+  pageSize.value = val
+  currentPage.value = 1 // 改变每页条数时回到第一页
+}
+
+const handleCurrentChange = (val: number) => {
+  currentPage.value = val
+}
+
 </script>
 
 <style scoped>
@@ -190,5 +234,19 @@ const handleSortChange = (prop: string, order: string | null) => {
 .activity-link:hover {
   opacity: 0.7;
   text-decoration: underline;
+}
+
+.pagination-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #ebeef5;
+}
+
+.page-info {
+  font-size: 14px;
+  color: #666;
 }
 </style>

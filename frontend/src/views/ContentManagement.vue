@@ -119,9 +119,7 @@
 
     <!-- 上传对话框 -->
     <UploadDialog
-      v-model="uploadDialogVisible"
-      @success="handleUploadSuccess"
-      @error="handleUploadError"
+      v-model="uploadDialogVisible" upload-url="/api/contents/import?platform=ledger"
     />
   </div>
 </template>
@@ -418,21 +416,17 @@ onUnmounted(() => {
 })
 
 const handleDownloadTemplate = () => {
-  // TODO: 实现下载模板功能
-  ElMessage.info('下载模板功能开发中...')
+  const link = document.createElement('a')
+  link.href = '/20260212_content_data_import.xlsx'
+  link.download = '20260212_content_data_import.xlsx'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  ElMessage.success('模板下载成功')
 }
 
 const handleImport = () => {
   uploadDialogVisible.value = true
-}
-
-const handleUploadSuccess = (file: File) => {
-  ElMessage.success(`文件 ${file.name} 上传成功`)
-  // TODO: 处理上传成功后的逻辑，例如刷新表格数据
-}
-
-const handleUploadError = (error: string) => {
-  ElMessage.error(error)
 }
 
 const tableSearchText = ref('')

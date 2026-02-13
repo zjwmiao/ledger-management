@@ -7,11 +7,11 @@
     </el-breadcrumb>
 
     <!-- Main Card -->
-    <el-card class="detail-card" shadow="never">
+    <el-card class="detail-card" shadow="never" v-loading="loading">
       <!-- Activity Name Title -->
       <template #header>
         <div class="card-header">
-          <span class="activity-name">{{ activityData.name }}</span>
+          <span class="activity-name">{{ activityDetail?.name }}</span>
         </div>
       </template>
 
@@ -29,67 +29,67 @@
             <el-row :gutter="40">
               <el-col :span="12">
                 <el-form-item label="举办社区">
-                  <span>{{ activityData.community }}</span>
+                  <span>{{ activityDetail?.community }}</span>
                 </el-form-item>
               </el-col>
               <el-col :span="12">
                 <el-form-item label="活动时间">
-                  <span>{{ activityData.time }}</span>
+                  <span>{{ activityDetail?.startDate ? formatDateRange(activityDetail.startDate, activityDetail.endDate) : '' }}</span>
                 </el-form-item>
               </el-col>
             </el-row>
             <el-row :gutter="40">
               <el-col :span="12">
                 <el-form-item label="活动地址">
-                  <span>{{ activityData.location }}</span>
+                  <span>{{ activityDetail?.location }}</span>
                 </el-form-item>
               </el-col>
               <el-col :span="12">
                 <el-form-item label="合作企业">
-                  <span>{{ activityData.partners }}</span>
+                  <span>{{ activityDetail?.partnerCompanies }}</span>
                 </el-form-item>
               </el-col>
             </el-row>
             <el-row :gutter="40">
               <el-col :span="12">
                 <el-form-item label="活动预算">
-                  <span>{{ activityData.budget }}</span>
+                  <span>{{ activityDetail?.budget }}</span>
                 </el-form-item>
               </el-col>
               <el-col :span="12">
                 <el-form-item label="活动支撑">
-                  <span>{{ activityData.support }}</span>
+                  <span>{{ activityDetail?.supportInfo }}</span>
                 </el-form-item>
               </el-col>
             </el-row>
             <el-row :gutter="40">
               <el-col :span="12">
                 <el-form-item label="活动类型">
-                  <span>{{ activityData.type }}</span>
+                  <span>{{ activityDetail?.type }}</span>
                 </el-form-item>
               </el-col>
               <el-col :span="12">
                 <el-form-item label="活动方式">
-                  <span>{{ activityData.format }}</span>
+                  <span>{{ activityDetail?.activityMode }}</span>
                 </el-form-item>
               </el-col>
             </el-row>
             <el-row :gutter="40">
               <el-col :span="12">
                 <el-form-item label="报名人数">
-                  <span>{{ activityData.registrationCount }}</span>
+                  <span>{{ activityDetail?.registrationCount }}</span>
                 </el-form-item>
               </el-col>
               <el-col :span="12">
                 <el-form-item label="签到人数">
-                  <span>{{ activityData.checkinCount }}</span>
+                  <span>{{ activityDetail?.checkinCount }}</span>
                 </el-form-item>
               </el-col>
             </el-row>
             <el-row :gutter="40">
               <el-col :span="12">
                 <el-form-item label="直播观看">
-                  <span>{{ activityData.liveViews }}</span>
+                  <span>{{ activityDetail?.livestreamViews }}</span>
                 </el-form-item>
               </el-col>
             </el-row>
@@ -221,6 +221,14 @@
           :data="participantData"
           :expandable="true"
         >
+          <template #attended="{ row }">
+            <el-icon v-if="row.attended" color="rgb(11, 177, 81)"><SuccessFilled /></el-icon>
+            <span v-else>--</span>
+          </template>
+          <template #giftReceived="{ row }">
+            <el-icon v-if="row.giftReceived" color="rgb(11, 177, 81)"><SuccessFilled /></el-icon>
+            <span v-else>--</span>
+          </template>
           <!-- Operations Column -->
           <template #operations="{ row }">
             <span class="operation-link" @click="handleEdit(row)">编辑</span>
@@ -234,24 +242,24 @@
                 <el-row :gutter="40">
                   <el-col :span="12">
                     <el-form-item label="活动满意度">
-                      <span>{{ row.satisfaction }}</span>
+                      <span>{{ row.expand?.satisfaction || '' }}</span>
                     </el-form-item>
                   </el-col>
                   <el-col :span="12">
                     <el-form-item label="感兴趣议题">
-                      <span>{{ row.interestedTopics }}</span>
+                      <span>{{ row.expand?.interestedTopics || '' }}</span>
                     </el-form-item>
                   </el-col>
                 </el-row>
                 <el-row :gutter="40">
                   <el-col :span="12">
                     <el-form-item label="意见和建议">
-                      <span>{{ row.feedback }}</span>
+                      <span>{{ row.expand?.feedback || '' }}</span>
                     </el-form-item>
                   </el-col>
                   <el-col :span="12">
                     <el-form-item label="未来活动期望">
-                      <span>{{ row.futureExpectations }}</span>
+                      <span>{{ row.expand?.futureExpectations || '' }}</span>
                     </el-form-item>
                   </el-col>
                 </el-row>
@@ -345,13 +353,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { Edit } from '@element-plus/icons-vue'
-import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
+import { Edit, SuccessFilled } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import CommonTable from '@/components/CommonTable.vue'
+import { getActivityById, getParticipations, updateActivity, updateParticipation, deleteParticipation, type Activity } from '@/api/activity'
 
 const route = useRoute()
+
+// Loading state
+const loading = ref(false)
+
+// Activity data from API
+const activityDetail = ref<Activity | null>(null)
 
 // Edit mode state
 const isEditing = ref(false)
@@ -384,112 +399,66 @@ const formRules: FormRules = {
     { required: true, message: '请输入活动地址', trigger: 'blur' }
   ],
   type: [
-    { required: true, message: '请输入活动类型', trigger: 'blur' }
+    { required: true, message: '请选择活动类型', trigger: 'change' }
   ],
   format: [
-    { required: true, message: '请输入活动方式', trigger: 'blur' }
+    { required: true, message: '请选择活动方式', trigger: 'change' }
   ]
 }
 
-// Mock database of all activities
-const allActivities = {
-  'openEuler Summit 2024': {
-    name: 'openEuler Summit 2024',
-    community: 'openEuler',
-    time: '2024-03-15 09:00-18:00',
-    location: '北京国家会议中心',
-    partners: '华为、中科院、清华大学',
-    budget: '¥500,000',
-    support: '华为技术支持',
-    type: '技术峰会',
-    format: '线下+线上',
-    registrationCount: 500,
-    checkinCount: 450,
-    liveViews: 12000
-  },
-  'AI开发者大会': {
-    name: 'AI开发者大会',
-    community: 'MindSpore',
-    time: '2024-04-20 09:00-17:00',
-    location: '上海世博中心',
-    partners: '华为、复旦大学、上海交大',
-    budget: '¥300,000',
-    support: 'MindSpore社区',
-    type: '开发者大会',
-    format: '线下+线上',
-    registrationCount: 300,
-    checkinCount: 280,
-    liveViews: 8000
-  },
-  '数据库技术交流会': {
-    name: '数据库技术交流会',
-    community: 'openGauss',
-    time: '2024-05-10 14:00-18:00',
-    location: '深圳科技园',
-    partners: '华为、腾讯',
-    budget: '¥150,000',
-    support: 'openGauss社区',
-    type: '技术交流会',
-    format: '线下',
-    registrationCount: 200,
-    checkinCount: 180,
-    liveViews: 0
-  },
-  '开源操作系统研讨会': {
-    name: '开源操作系统研讨会',
-    community: 'openEuler',
-    time: '2024-06-05 09:00-17:00',
-    location: '杭州云栖小镇',
-    partners: '阿里云、浙江大学',
-    budget: '¥200,000',
-    support: 'openEuler社区',
-    type: '研讨会',
-    format: '线下',
-    registrationCount: 150,
-    checkinCount: 140,
-    liveViews: 0
-  },
-  '机器学习实战工作坊': {
-    name: '机器学习实战工作坊',
-    community: 'MindSpore',
-    time: '2024-07-12 09:00-18:00',
-    location: '广州天河区',
-    partners: '华为、中山大学',
-    budget: '¥180,000',
-    support: 'MindSpore技术团队',
-    type: '工作坊',
-    format: '线下',
-    registrationCount: 250,
-    checkinCount: 230,
-    liveViews: 0
+// Format date range
+const formatDateRange = (startDate: string, endDate: string) => {
+  if (!startDate) return ''
+  if (startDate === endDate) {
+    return startDate
+  }
+  return `${startDate} - ${endDate}`
+}
+
+// Fetch activity details
+const fetchActivityDetail = async (id: string) => {
+  loading.value = true
+  try {
+    const data = await getActivityById(id)
+    activityDetail.value = data
+  } catch (error) {
+    console.error('Failed to fetch activity detail:', error)
+    ElMessage.error('活动详情加载失败')
+  } finally {
+    loading.value = false
   }
 }
 
-// Get activity name from query parameter
-const activityName = computed(() => route.query.name as string || 'openEuler Summit 2024')
+const activityId = computed(() => route.query.id as string)
 
-// Get activity data based on the name from query parameter
-const activityData = computed(() => {
-  return allActivities[activityName.value as keyof typeof allActivities] || allActivities['openEuler Summit 2024']
+// Load activity on mount
+onMounted(() => {
+  if (activityId.value) {
+    fetchActivityDetail(activityId.value)
+    fetchParticipationData()
+  } else {
+    ElMessage.warning('未找到活动ID')
+  }
 })
 
 // Edit mode functions
 const startEdit = () => {
-  // Initialize edit form with current data
-  const currentData = activityData.value
-  const timeParts = currentData.time.split(' - ')
+  if (!activityDetail.value) return
+
+  const activity = activityDetail.value
+  // 将API数据映射到表单字段
   editForm.value = {
-    community: currentData.community,
-    timeRange: timeParts.length === 2 ? timeParts : [currentData.time, currentData.time],
-    location: currentData.location,
-    partners: currentData.partners,
-    budget: currentData.budget,
-    support: currentData.support,
-    type: currentData.type,
-    format: currentData.format,
-    registrationCount: currentData.registrationCount,
-    checkinCount: currentData.checkinCount,
-    liveViews: currentData.liveViews
+    community: activity.community,
+    timeRange: [activity.startDate, activity.endDate],
+    location: activity.location,
+    partners: activity.organizer,
+    budget: '',
+    support: '',
+    type: activity.type,
+    format: '',
+    registrationCount: activity.maxParticipants,
+    checkinCount: 0,
+    liveViews: 0
   }
   isEditing.value = true
 }
@@ -500,36 +469,33 @@ const cancelEdit = () => {
 }
 
 const saveEdit = async () => {
-  if (!formRef.value) return
+  if (!formRef.value || !activityDetail.value) return
 
-  await formRef.value.validate((valid) => {
+  await formRef.value.validate(async (valid) => {
     if (valid) {
-      // Format time range for display
-      const timeStr = editForm.value.timeRange.length === 2
-        ? `${editForm.value.timeRange[0]} - ${editForm.value.timeRange[1]}`
-        : editForm.value.timeRange[0]
-
-      // Update activity data (in real app, this would be an API call)
-      const activityKey = activityName.value as keyof typeof allActivities
-      if (allActivities[activityKey]) {
-        allActivities[activityKey] = {
-          ...allActivities[activityKey],
-          community: editForm.value.community,
-          time: timeStr,
+      try {
+        // 将表单字段映射回API数据
+        const updateData = {
+          platform: editForm.value.community,
+          startDate: editForm.value.timeRange[0],
+          endDate: editForm.value.timeRange[1],
           location: editForm.value.location,
-          partners: editForm.value.partners,
-          budget: editForm.value.budget,
-          support: editForm.value.support,
+          organizer: editForm.value.partners,
           type: editForm.value.type,
-          format: editForm.value.format,
-          registrationCount: editForm.value.registrationCount,
-          checkinCount: editForm.value.checkinCount,
-          liveViews: editForm.value.liveViews
+          maxParticipants: editForm.value.registrationCount
         }
-      }
 
-      isEditing.value = false
-      ElMessage.success('保存成功')
+        await updateActivity(activityDetail.value!.id, updateData)
+
+        // Refresh activity data
+        await fetchActivityDetail(activityDetail.value!.id)
+
+        isEditing.value = false
+        ElMessage.success('保存成功')
+      } catch (error) {
+        console.error('Failed to update activity:', error)
+        ElMessage.error('保存失败')
+      }
     } else {
       ElMessage.error('请填写所有必填字段')
     }
@@ -546,54 +512,57 @@ const participantColumns = [
   { prop: 'phone', label: '手机', width: 130 },
   { prop: 'organization', label: '所属组织', width: 150 },
   { prop: 'attended', label: '是否到场', width: 100 },
+  { prop: 'giftReceived', label: '是否领取礼品', width: 130 },
   { prop: 'operations', label: '操作', width: 120 }
 ]
 
+interface Participation {
+  id: string
+  name: string
+  githubId: string
+  gitcodeId: string
+  giteeId: string
+  email: string
+  phone: string
+  organization: string
+  attended: boolean
+  giftReceived: boolean
+  satisfaction: number | string
+  interestedTopics: string
+  feedback: string
+  futureExpectations: string
+}
+
 // Participant mock data
-const participantData = ref([
-  {
-    name: '张三',
-    githubId: 'zhangsan',
-    gitcodeId: 'zhangsan123',
-    giteeId: 'zhangsan_gitee',
-    email: 'zhangsan@example.com',
-    phone: '13800138000',
-    organization: '华为',
-    attended: '是',
-    satisfaction: '非常满意',
-    interestedTopics: '云原生、容器技术',
-    feedback: '活动组织得很好，内容丰富',
-    futureExpectations: '希望有更多实战工作坊'
-  },
-  {
-    name: '李四',
-    githubId: 'lisi',
-    gitcodeId: 'lisi456',
-    giteeId: 'lisi_gitee',
-    email: 'lisi@example.com',
-    phone: '13900139000',
-    organization: '中科院',
-    attended: '是',
-    satisfaction: '满意',
-    interestedTopics: '操作系统内核、性能优化',
-    feedback: '技术分享很有深度',
-    futureExpectations: '希望增加更多交流时间'
-  },
-  {
-    name: '王五',
-    githubId: 'wangwu',
-    gitcodeId: 'wangwu789',
-    giteeId: 'wangwu_gitee',
-    email: 'wangwu@example.com',
-    phone: '13700137000',
-    organization: '清华大学',
-    attended: '否',
-    satisfaction: '一般',
-    interestedTopics: '开源社区治理',
-    feedback: '线上直播体验还可以改进',
-    futureExpectations: '希望提供录播回放'
+const participantData = ref([] as Participation[])
+
+const fetchParticipationData = async () => {
+  const data = await getParticipations(activityId.value)
+  if (Array.isArray(data)) {
+    participantData.value = data.map(item => {
+      const platFormMap = item.developerWithAccounts.platformAccounts.reduce((map, d) => {
+        map[d.platform.toLowerCase()] = d
+        return map
+      }, {})
+      return {
+        id: item.id,
+        name: item.developerWithAccounts.name,
+        githubId: platFormMap.github?.platformAccountId || '--',
+        giteeId: platFormMap.gitee?.platformAccountId || '--',
+        gitcodeId: platFormMap.gitcode?.platformAccountId || '--',
+        phone: '--',
+        email: '--',
+        organization: '--',
+        attended: item.attended,
+        giftReceived: item.giftReceived,
+        satisfaction: item.satisfaction,
+        interestedTopics: item.interestedTopics,
+        feedback: item.feedback,
+        futureExpectations: item.futureExpectations,
+      }
+    })
   }
-])
+}
 
 // Drawer state for editing participant
 const drawerVisible = ref(false)
@@ -602,6 +571,7 @@ const editingParticipantIndex = ref<number>(-1)
 
 // Edit participant form data
 const editParticipantForm = ref({
+  id: '',
   name: '',
   githubId: '',
   gitcodeId: '',
@@ -610,6 +580,7 @@ const editParticipantForm = ref({
   phone: '',
   organization: '',
   attended: '',
+  giftReceived: '',
   satisfaction: '',
   interestedTopics: '',
   feedback: '',
@@ -635,11 +606,12 @@ const participantFormRules: FormRules = {
 const handleEdit = (row: any) => {
   // Find the index of the participant being edited
   editingParticipantIndex.value = participantData.value.findIndex(
-    (p) => p.name === row.name && p.email === row.email
+    (p) => p.id === row.id
   )
 
   // Initialize form with current participant data
   editParticipantForm.value = {
+    id: row.id,
     name: row.name,
     githubId: row.githubId,
     gitcodeId: row.gitcodeId,
@@ -648,6 +620,7 @@ const handleEdit = (row: any) => {
     phone: row.phone,
     organization: row.organization,
     attended: row.attended,
+    giftReceived: row.giftReceived,
     satisfaction: row.satisfaction,
     interestedTopics: row.interestedTopics,
     feedback: row.feedback,
@@ -657,9 +630,29 @@ const handleEdit = (row: any) => {
   drawerVisible.value = true
 }
 
-const handleDelete = (row: any) => {
-  console.log('删除参与者:', row)
-  // TODO: 实现删除功能
+const handleDelete = async (row: any) => {
+  try {
+    await ElMessageBox.confirm(
+      '确定要删除该参与者吗？',
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    await deleteParticipation(activityId.value, row.id)
+    ElMessage.success('删除成功')
+
+    // 重新加载参与者列表
+    await fetchParticipationData()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('Failed to delete participant:', error)
+      ElMessage.error('删除失败')
+    }
+  }
 }
 
 const cancelParticipantEdit = () => {
@@ -671,22 +664,32 @@ const cancelParticipantEdit = () => {
 const saveParticipantEdit = async () => {
   if (!participantFormRef.value) return
 
-  await participantFormRef.value.validate((valid) => {
+  try {
+    const valid = await participantFormRef.value.validate()
     if (valid) {
-      // Update participant data
-      if (editingParticipantIndex.value !== -1) {
-        participantData.value[editingParticipantIndex.value] = {
-          ...editParticipantForm.value
-        }
+      // 调用更新接口
+      const updateData = {
+        attended: Boolean(editParticipantForm.value.attended),
+        giftReceived: Boolean(editParticipantForm.value.giftReceived),
+        satisfaction: Number(editParticipantForm.value.satisfaction),
+        interestedTopics: editParticipantForm.value.interestedTopics,
+        feedback: editParticipantForm.value.feedback,
+        futureExpectations: editParticipantForm.value.futureExpectations
       }
+
+      await updateParticipation(activityId.value, editParticipantForm.value.id, updateData)
 
       drawerVisible.value = false
       ElMessage.success('保存成功')
       editingParticipantIndex.value = -1
-    } else {
-      ElMessage.error('请填写所有必填字段')
+
+      // 重新加载参与者列表
+      await fetchParticipationData()
     }
-  })
+  } catch (error) {
+    console.error('Failed to update participant:', error)
+    ElMessage.error('保存失败')
+  }
 }
 </script>
 
