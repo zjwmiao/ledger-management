@@ -102,10 +102,15 @@
       <CommonTable
         :columns="displayColumns"
         :data="tableData"
+        :loading="loading"
         @filter-change="handleFilterChange"
         @search-change="handleSearchChange"
         @sort-change="handleSortChange"
-      />
+      >
+        <template #completionRate="{ row }">
+          <span>{{ row.completionRate || '--' }}%</span>
+        </template>
+      </CommonTable>
       <div class="table-pagination">
         <span class="page-info">共 {{ tableData.length }} 条项目</span>
         <el-pagination
@@ -119,7 +124,9 @@
 
     <!-- 上传对话框 -->
     <UploadDialog
-      v-model="uploadDialogVisible" upload-url="/api/contents/import?platform=ledger"
+      v-model="uploadDialogVisible"
+      upload-url="/api/contents/import?platform=ledger"
+      @success="fetchContents"
     />
   </div>
 </template>
@@ -133,6 +140,7 @@ import UploadDialog from '@/components/UploadDialog.vue'
 import { Setting } from '@element-plus/icons-vue'
 import useCheckbox from '@/composables/useCheckbox'
 import { ElMessage } from 'element-plus'
+import { getContents, type Content } from '@/api/content'
 
 interface Stats {
   totalReads: number
@@ -406,6 +414,7 @@ onMounted(() => {
   initMaterialTypeChart()
   initPublishTypeChart()
   window.addEventListener('resize', handleResize)
+  fetchContents()
 })
 
 onUnmounted(() => {
@@ -434,9 +443,9 @@ const tableSearchText = ref('')
 const tableColumnsRaw = [
   { label: '社区', prop: 'community' },
   { label: '内容标题', prop: 'title' },
-  { label: '关联活动', prop: 'activity' },
+  { label: '关联活动', prop: 'activityName' },
   { label: '发布平台', prop: 'platform', sortable: true },
-  { label: '作者', prop: 'author' },
+  { label: '作者', prop: 'authorName' },
   { label: '发布时间', prop: 'publishTime', sortable: true },
   {
     label: '内容类型',
@@ -468,11 +477,11 @@ const tableColumnsRaw = [
       { label: '转发', value: '转发' }
     ]
   },
-  { label: '发布人', prop: 'publisher' },
-  { label: '阅读数', prop: 'readCount' },
+  { label: '发布人', prop: 'publisherName' },
+  { label: '阅读数', prop: 'viewCount' },
   { label: '收藏数', prop: 'favoriteCount' },
   { label: '评论数', prop: 'commentCount' },
-  { label: '转发数', prop: 'forwardCount' },
+  { label: '转发数', prop: 'shareCount' },
   { label: '完播率', prop: 'completionRate' },
 ]
 
@@ -486,42 +495,23 @@ const displayColumns = computed(() => {
   return tableColumnsRaw.filter(col => col.prop === 'community' || checked.value.includes(col.prop))
 })
 
-const tableData = ref([
-  {
-    community: '社区A',
-    title: '内容标题1',
-    activity: '活动1',
-    platform: '平台1',
-    author: '作者1',
-    publishTime: '2023-01-01',
-    contentType: '图文',
-    materialType: '图片',
-    publishType: '平台首发',
-    publisher: '发布人1',
-    readCount: 100,
-    favoriteCount: 50,
-    commentCount: 20,
-    forwardCount: 10,
-    completionRate: '85%'
-  },
-  {
-    community: '社区B',
-    title: '内容标题2',
-    activity: '活动2',
-    platform: '平台2',
-    author: '作者2',
-    publishTime: '2023-01-02',
-    contentType: '视频',
-    materialType: '视频',
-    publishType: '转发',
-    publisher: '发布人2',
-    readCount: 200,
-    favoriteCount: 100,
-    commentCount: 40,
-    forwardCount: 30,
-    completionRate: '95%'
+const tableData = ref<Content[]>([])
+const loading = ref(false)
+
+// 获取内容列表
+const fetchContents = async () => {
+  loading.value = true
+  try {
+    const data = await getContents()
+    tableData.value = data
+    ElMessage.success('内容列表加载成功')
+  } catch (error) {
+    console.error('Failed to fetch contents:', error)
+    ElMessage.error('内容列表加载失败')
+  } finally {
+    loading.value = false
   }
-])
+}
 
 // Table event handlers
 const handleFilterChange = (prop: string, values: string[]) => {
